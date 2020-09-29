@@ -82,6 +82,10 @@ template <template <typename A> class FacadeT, typename AlgorithmT> class DataFa
                 name_to_class[name] = extractor::getClassData(index);
             }
         }
+
+        // make a copy of excludable classes so it stays valid for the lifetime of this
+        // DatafacadeFactory
+        excludable_classes = properties->excludable_classes;
     }
 
     // Algorithm without exclude flags
@@ -137,11 +141,11 @@ template <template <typename A> class FacadeT, typename AlgorithmT> class DataFa
         }
 
         auto exclude_iter = std::find(
-            properties->excludable_classes.begin(), properties->excludable_classes.end(), mask);
-        if (exclude_iter != properties->excludable_classes.end())
+            excludable_classes.begin(), excludable_classes.end(), mask);
+        if (exclude_iter != excludable_classes.end())
         {
             auto exclude_index =
-                std::distance(properties->excludable_classes.begin(), exclude_iter);
+                std::distance(excludable_classes.begin(), exclude_iter);
             return facades[exclude_index];
         }
 
@@ -151,6 +155,7 @@ template <template <typename A> class FacadeT, typename AlgorithmT> class DataFa
     std::vector<std::shared_ptr<const Facade>> facades;
     std::unordered_map<std::string, extractor::ClassData> name_to_class;
     const extractor::ProfileProperties *properties = nullptr;
+    std::array<extractor::ClassData, extractor::MAX_EXCLUDABLE_CLASSES> excludable_classes;
 };
 }
 }
