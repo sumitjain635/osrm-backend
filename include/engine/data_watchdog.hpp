@@ -57,7 +57,7 @@ class DataWatchdogImpl<AlgorithmT, datafacade::ContiguousInternalMemoryDataFacad
             updatable_region = *updatable_shared_region;
 
             facade_factory =
-                DataFacadeFactory<datafacade::ContiguousInternalMemoryDataFacade, AlgorithmT>(
+                std::make_shared<DataFacadeFactory<datafacade::ContiguousInternalMemoryDataFacade, AlgorithmT>>(
                     std::make_shared<datafacade::SharedMemoryAllocator>(
                         std::vector<storage::SharedRegionRegister::ShmKey>{
                             static_region.shm_key, updatable_region.shm_key}));
@@ -75,11 +75,21 @@ class DataWatchdogImpl<AlgorithmT, datafacade::ContiguousInternalMemoryDataFacad
 
     std::shared_ptr<const Facade> Get(const api::BaseParameters &params) const
     {
-        return facade_factory.Get(params);
+        // Ensure that an exchange of facade_factory while ->Get() is in progress
+        // doesn't access an object undergoing destruction from the Run() thread
+        // We increase the ref count on facade_factory, and it only gets decreased
+        // (possibly to zero) *after* this function returns
+        auto facade_factory_copy = facade_factory;
+        return facade_factory_copy->Get(params);
     }
     std::shared_ptr<const Facade> Get(const api::TileParameters &params) const
     {
-        return facade_factory.Get(params);
+        // Ensure that an exchange of facade_factory while ->Get() is in progress
+        // doesn't access an object undergoing destruction from the Run() thread
+        // We increase the ref count on facade_factory, and it only gets decreased
+        // (possibly to zero) *after* this function returns
+        auto facade_factory_copy = facade_factory;
+        return facade_factory_copy->Get(params);
     }
 
   private:
@@ -112,7 +122,7 @@ class DataWatchdogImpl<AlgorithmT, datafacade::ContiguousInternalMemoryDataFacad
                         << static_region.timestamp << " and " << updatable_region.timestamp;
 
             facade_factory =
-                DataFacadeFactory<datafacade::ContiguousInternalMemoryDataFacade, AlgorithmT>(
+                std::make_shared<DataFacadeFactory<datafacade::ContiguousInternalMemoryDataFacade, AlgorithmT>>(
                     std::make_shared<datafacade::SharedMemoryAllocator>(
                         std::vector<storage::SharedRegionRegister::ShmKey>{
                             static_region.shm_key, updatable_region.shm_key}));
@@ -129,7 +139,7 @@ class DataWatchdogImpl<AlgorithmT, datafacade::ContiguousInternalMemoryDataFacad
     storage::SharedRegion updatable_region;
     storage::SharedRegion *static_shared_region;
     storage::SharedRegion *updatable_shared_region;
-    DataFacadeFactory<datafacade::ContiguousInternalMemoryDataFacade, AlgorithmT> facade_factory;
+    std::shared_ptr<DataFacadeFactory<datafacade::ContiguousInternalMemoryDataFacade, AlgorithmT>> facade_factory;
 };
 }
 
